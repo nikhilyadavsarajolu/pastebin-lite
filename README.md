@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pastebin Lite
+
+A lightweight Pastebin application built with Next.js, TypeScript, Tailwind CSS, and Upstash Redis. Users can create text pastes, generate shareable links, and optionally set expiration times and view limits.
+
+## Features
+
+- Create and share text pastes using unique URLs.
+- Optional time-to-live (TTL) expiration.
+- Optional maximum view limits.
+- Persistent storage using Upstash Redis.
+- Atomic view counting to handle concurrent requests safely.
+- Plain-text paste viewer with safe HTML escaping.
+- API validation and JSON error responses.
+- Test-time support for deterministic expiration checks.
+
+## Tech Stack
+
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Upstash Redis
+- Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20 or later
+- npm
+- An Upstash Redis database
+
+### Installation
+
+Clone the repository:
+
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
+cd pastebin-lite
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+### Environment Variables
+
+Create a `.env.local` file in the project root:
+
+```env
+UPSTASH_REDIS_REST_URL=your_upstash_redis_rest_url
+UPSTASH_REDIS_REST_TOKEN=your_upstash_redis_rest_token
+```
+
+For local deterministic expiry testing, optionally add:
+
+```env
+TEST_MODE=1
+```
+
+Do not commit your actual environment variables or Redis credentials.
+
+### Run Locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API Endpoints
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Health Check
 
-## Learn More
+`GET /api/healthz`
 
-To learn more about Next.js, take a look at the following resources:
+Checks whether the application can connect to Redis.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Create a Paste
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`POST /api/pastes`
 
-## Deploy on Vercel
+Example request:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```json
+{
+  "content": "Hello, Pastebin Lite!",
+  "ttl_seconds": 3600,
+  "max_views": 5
+}
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Both `ttl_seconds` and `max_views` are optional.
+
+Example response:
+
+```json
+{
+  "id": "generated-paste-id",
+  "url": "https://your-domain.com/p/generated-paste-id"
+}
+```
+
+### Retrieve a Paste
+
+`GET /api/pastes/:id`
+
+Returns the paste content, remaining views, and expiration timestamp.
+
+### View a Paste
+
+`GET /p/:id`
+
+Displays the paste as plain text in a shareable HTML page.
+
+Unavailable or expired pastes return a 404 response.
+
+## Storage and Expiration
+
+Paste records are stored in Upstash Redis, allowing data to persist across application requests and serverless deployments.
+
+View-limit checking and view-count increments are performed atomically using a Redis Lua script. This prevents concurrent requests from exceeding the configured maximum view count.
+
+Expiration is checked using the stored expiration timestamp. When `TEST_MODE=1`, the `x-test-now-ms` request header can provide a deterministic timestamp for testing.
+
+## Build and Lint
+
+Run ESLint:
+
+```bash
+npm run lint
+```
+
+Create a production build:
+
+```bash
+npm run build
+```
+
+## Deployment
+
+The application can be deployed on Vercel. Configure the Upstash Redis environment variables in the Vercel project settings before deploying.
+
+Do not enable `TEST_MODE=1` in production.
+
+## AI Assistance
+
+ChatGPT was used as a development assistant to understand requirements, discuss implementation choices, troubleshoot issues, and review edge cases. The implementation, integration, and testing were carried out by me with AI-assisted guidance.
